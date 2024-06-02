@@ -8,5 +8,13 @@
         "start": "node -r dotenv/config . dotenv_config_path=.env.production"
     },
     "author": "StarkzxP1",
-    "license": "ISC"
+    "license": "ISC",
+    "dependencies": {
+        "adm-zip": "^0.5.13",
+        "axios": "^1.7.2",
+        "dotenv": "^16.4.5",
+        "fs-extra": "^11.2.0",
+        "node-fetch-commonjs": "^3.3.2",
+        "prompt-sync": "^4.2.0"
+    }
 }
