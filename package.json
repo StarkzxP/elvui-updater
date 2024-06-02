@@ -1,0 +1,12 @@
+{
+    "name": "elvui-updater",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "node -r dotenv/config . dotenv_config_path=.env.test",
+        "start": "node -r dotenv/config . dotenv_config_path=.env.production"
+    },
+    "author": "StarkzxP1",
+    "license": "ISC"
+}
