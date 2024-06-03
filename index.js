@@ -20,6 +20,7 @@ async function getWowPath() {
             wowPath = prompt(`Ingrese la ruta de la carpeta de World of Warcraft (${defaultPath}):`);
             if (!wowPath) wowPath = defaultPath;
             if (fs.existsSync(wowPath)) {
+                console.clear();
                 break;
             } else {
                 console.log("Ruta no válida, intente nuevamente.");
@@ -71,24 +72,27 @@ async function main() {
         const wowPath = await getWowPath();
 
         const latestVersionData = await getLatestVersionData();
-        console.log(`Última versión disponible de ElvUI: ${latestVersionData.version}`);
+        console.log(`Última versión disponible de ElvUI: ${latestVersionData.version}\n`);
 
-        Object.keys(wowVersions).forEach(async (version) => {
-            const addonsPath = path.join(wowPath, `${wowVersions[version].directory}`, "Interface", "AddOns");
-            const tocPath = path.join(addonsPath, "ElvUI", "ElvUI_Mainline.toc");
+        for (const versionName in wowVersions) {
+            if (Object.hasOwnProperty.call(wowVersions, versionName)) {
+                const addonsPath = path.join(wowPath, `${wowVersions[versionName].directory}`, "Interface", "AddOns");
+                const tocPath = path.join(addonsPath, "ElvUI", "ElvUI_Mainline.toc");
 
-            const installedVersion = getInstalledVersion(tocPath);
-            console.log(`Versión instalada de ElvUI (${version}): ${installedVersion || "No instalado"}`);
+                const installedVersion = getInstalledVersion(tocPath);
+                console.log(`Versión instalada de ElvUI (${versionName}): ${installedVersion || "No instalado"}`);
 
-            if (!installedVersion) return;
-            if (installedVersion < latestVersionData.version) {
-                console.log(`Actualizando ElvUI (${version})...`);
-                await updateElvUI(addonsPath, latestVersionData);
-                console.log(`ElvUI (${version}) se ha actualizado correctamente.`);
-            } else {
-                console.log(`ElvUI (${version}) está actualizado.`);
+                if (!installedVersion) return;
+                if (installedVersion < latestVersionData.version) {
+                    console.log(`Actualizando ElvUI (${versionName})...`);
+                    updateElvUI(addonsPath, latestVersionData).then(() => {
+                        console.log(`ElvUI (${versionName}) se ha actualizado correctamente.`);
+                    });
+                } else {
+                    console.log(`ElvUI (${versionName}) está actualizado.`);
+                }
             }
-        });
+        }
     } catch (error) {
         console.error("Ocurrió un error:", error);
     }
