@@ -7,7 +7,7 @@ const prompt = require("prompt-sync")();
 
 const CONFIG_PATH = path.join(__dirname, "config.json");
 
-const wowVersions = { Retail: { directory: "_retail_" }, Classic: { directory: "_classic_" } };
+const wowVersions = { Retail: { directory: "_retail_" }, Classic: { directory: "_classic_" }, Classic_Era: { directory: "_classic_era_" } };
 
 async function getWowPath() {
     if (fs.existsSync(CONFIG_PATH)) {
@@ -50,21 +50,26 @@ async function getLatestVersionData() {
 
 async function updateElvUI(addonsPath, latestVersionData) {
     const elvUIPaths = ["ElvUI", "ElvUI_Libraries", "ElvUI_Options"].map((dir) => path.join(addonsPath, dir));
-
-    for (const dirPath of elvUIPaths) {
-        if (fs.existsSync(dirPath)) {
-            fse.removeSync(dirPath);
+    try {
+        for (const dirPath of elvUIPaths) {
+            if (fs.existsSync(dirPath)) {
+                fse.removeSync(dirPath);
+            }
         }
+
+        const response = await axios({
+            method: "GET",
+            url: latestVersionData.url,
+            responseType: "arraybuffer",
+        });
+
+        const zip = new AdmZip(response.data);
+        zip.extractAllTo(addonsPath, true);
+
+        return null;
+    } catch (error) {
+        return error;
     }
-
-    const response = await axios({
-        method: "GET",
-        url: latestVersionData.url,
-        responseType: "arraybuffer",
-    });
-
-    const zip = new AdmZip(response.data);
-    zip.extractAllTo(addonsPath, true);
 }
 
 async function main() {
@@ -74,25 +79,38 @@ async function main() {
         const latestVersionData = await getLatestVersionData();
         console.log(`Última versión disponible de ElvUI: ${latestVersionData.version}\n`);
 
+        const results = {};
         for (const versionName in wowVersions) {
             if (Object.hasOwnProperty.call(wowVersions, versionName)) {
                 const addonsPath = path.join(wowPath, `${wowVersions[versionName].directory}`, "Interface", "AddOns");
                 const tocPath = path.join(addonsPath, "ElvUI", "ElvUI_Mainline.toc");
 
                 const installedVersion = getInstalledVersion(tocPath);
-                console.log(`Versión instalada de ElvUI (${versionName}): ${installedVersion || "No instalado"}`);
+                let versionMessage = `Versión ${versionName.replace("_", " ")}: ${installedVersion || "No instalado"}.`;
 
-                if (!installedVersion) return;
+                if (!installedVersion) continue;
                 if (installedVersion < latestVersionData.version) {
-                    console.log(`Actualizando ElvUI (${versionName})...`);
-                    updateElvUI(addonsPath, latestVersionData).then(() => {
-                        console.log(`ElvUI (${versionName}) se ha actualizado correctamente.`);
-                    });
+                    console.log(versionMessage + "  Estado: Actualizando...");
+                    results[versionName] = await updateElvUI(addonsPath, latestVersionData);
                 } else {
-                    console.log(`ElvUI (${versionName}) está actualizado.`);
+                    console.log(versionMessage + "  Estado: Actualizado.");
                 }
             }
         }
+        const successes = [];
+        const errors = [];
+        for (const versionName in results) {
+            if (Object.hasOwnProperty.call(results, versionName)) {
+                const versionNameFormatted = versionName.replace("_", " ");
+                if (!results[versionName]) {
+                    successes.push(versionNameFormatted);
+                } else {
+                    errors.push(`${versionNameFormatted}: ${results[versionName]}`);
+                }
+            }
+        }
+        if (successes.length > 0) console.log("\nSe han actualizado correctamente las siguientes versiones: " + successes.join(", ") + ".");
+        if (errors.length > 0) console.log("\nHan ocurrido los siguientes errores al actualizar:\n\n" + errors.join("\n\n"));
     } catch (error) {
         console.error("Ocurrió un error:", error);
     }
